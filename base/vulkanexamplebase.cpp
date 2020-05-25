@@ -870,6 +870,43 @@ bool VulkanExampleBase::initVulkan()
 			}
 		}
 	}
+
+	VkDeviceGroupDeviceCreateInfoKHR deviceGroupCreateInfo{};
+	std::vector<VkPhysicalDeviceGroupProperties> physicalDeviceGroupProperties;
+	if (settings.mgpu)
+	{
+		uint32_t physicalDeviceGroupCount = 0;
+		VK_CHECK_RESULT(vkEnumeratePhysicalDeviceGroups(instance, &physicalDeviceGroupCount, nullptr));
+		if (physicalDeviceGroupCount)
+		{
+			auto fillDeviceGroupCreateInfo = [&]() {
+				physicalDeviceGroupProperties.resize(physicalDeviceGroupCount);
+				VK_CHECK_RESULT(vkEnumeratePhysicalDeviceGroups(instance, &physicalDeviceGroupCount, physicalDeviceGroupProperties.data()));
+				for (uint32_t physicalDeviceGroupPropertyIndex = 0; physicalDeviceGroupPropertyIndex < physicalDeviceGroupCount; ++physicalDeviceGroupPropertyIndex)
+				{
+					auto& physicalDeviceGroupProperty = physicalDeviceGroupProperties[physicalDeviceGroupPropertyIndex];
+					if (physicalDeviceGroupProperty.physicalDeviceCount > 1)
+					{
+						for (uint32_t physicalDeviceIndex = 0; physicalDeviceIndex < physicalDeviceGroupProperty.physicalDeviceCount; ++physicalDeviceIndex)
+						{
+							if (physicalDevices[selectedDevice] == physicalDeviceGroupProperty.physicalDevices[physicalDeviceIndex])
+							{
+								deviceGroupCreateInfo.pNext = deviceCreatepNextChain;
+								deviceGroupCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO;
+								deviceGroupCreateInfo.physicalDeviceCount = physicalDeviceGroupProperty.physicalDeviceCount;
+								deviceGroupCreateInfo.pPhysicalDevices = physicalDeviceGroupProperty.physicalDevices;
+								deviceCreatepNextChain = &deviceGroupCreateInfo;
+								return;
+							}
+						}
+					}
+				}
+				assert(0);
+			};
+			fillDeviceGroupCreateInfo();
+		}
+	} // if (settings.mgpu)
+
 #endif
 
 	physicalDevice = physicalDevices[selectedDevice];

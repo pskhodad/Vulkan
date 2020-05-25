@@ -65,6 +65,7 @@ private:
 	PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
 	PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
 	PFN_vkQueuePresentKHR fpQueuePresentKHR;
+	PFN_vkGetDeviceGroupPresentCapabilitiesKHR fpGetDeviceGroupPresentCapabilitiesKHR;
 public:
 	VkFormat colorFormat;
 	VkColorSpaceKHR colorSpace;
@@ -269,6 +270,7 @@ public:
 		GET_DEVICE_PROC_ADDR(device, GetSwapchainImagesKHR);
 		GET_DEVICE_PROC_ADDR(device, AcquireNextImageKHR);
 		GET_DEVICE_PROC_ADDR(device, QueuePresentKHR);
+		GET_DEVICE_PROC_ADDR(device, GetDeviceGroupPresentCapabilitiesKHR);
 	}
 
 	/** 
@@ -400,6 +402,17 @@ public:
 		if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
 			swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		}
+
+		VkDeviceGroupPresentCapabilitiesKHR deviceGroupPresentCapabilities{};
+		VK_CHECK_RESULT(fpGetDeviceGroupPresentCapabilitiesKHR(device, &deviceGroupPresentCapabilities));
+
+		VkDeviceGroupSwapchainCreateInfoKHR deviceGroupSwapchainCreateInfoKHR{};
+		deviceGroupSwapchainCreateInfoKHR.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SWAPCHAIN_CREATE_INFO_KHR;
+		deviceGroupSwapchainCreateInfoKHR.modes = deviceGroupPresentCapabilities.modes;
+		deviceGroupSwapchainCreateInfoKHR.pNext = NULL;
+
+		if (swapchainCI.pNext == NULL)
+			swapchainCI.pNext = &deviceGroupSwapchainCreateInfoKHR;
 
 		VK_CHECK_RESULT(fpCreateSwapchainKHR(device, &swapchainCI, nullptr, &swapChain));
 

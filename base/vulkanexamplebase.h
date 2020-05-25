@@ -156,6 +156,8 @@ public:
 		bool vsync = false;
 		/** @brief Enable UI overlay */
 		bool overlay = false;
+		/** @brief Enable Multi-GPU */
+		bool mgpu = false;
 	} settings;
 
 	VkClearColorValue defaultClearColor = { { 0.025f, 0.025f, 0.025f, 1.0f } };
