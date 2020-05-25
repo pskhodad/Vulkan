@@ -75,6 +75,17 @@ public:
 	VkDescriptorSet descriptorSet;
 	VkDescriptorSetLayout descriptorSetLayout;
 
+	//uint32_t renderDeviceMask = 0b10;
+	//uint32_t renderGpuIndex = 1;
+	//uint32_t broadcastDeviceMask = 0b11;
+	//uint32_t presentDeviceMask = 0b01;
+
+	// ensure it works on single gpu also
+	uint32_t renderDeviceMask = 0b01;
+	uint32_t renderGpuIndex = 0;
+	uint32_t broadcastDeviceMask = 0b01;
+	uint32_t presentDeviceMask = 0b01;
+
 	VulkanExample() : VulkanExampleBase(ENABLE_VALIDATION)
 	{
 		title = "Texture loading";
@@ -83,7 +94,7 @@ public:
 		camera.setRotation(glm::vec3(0.0f, 15.0f, 0.0f));
 		camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 256.0f);
 		settings.overlay = true;
-		// settings.mgpu = true;
+		settings.mgpu = false;
 	}
 
 	~VulkanExample()
@@ -490,7 +501,8 @@ public:
 			renderPassBeginInfo.framebuffer = frameBuffers[i];
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
-
+			if (settings.mgpu)
+				vkCmdSetDeviceMask(drawCmdBuffers[i], renderDeviceMask);
 			vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			VkViewport viewport = vks::initializers::viewport((float)width, (float)height, 0.0f, 1.0f);
@@ -509,9 +521,9 @@ public:
 			vkCmdDrawIndexed(drawCmdBuffers[i], indexCount, 1, 0, 0, 0);
 
 			drawUI(drawCmdBuffers[i]);
-
 			vkCmdEndRenderPass(drawCmdBuffers[i]);
-
+			if (settings.mgpu)
+				vkCmdSetDeviceMask(drawCmdBuffers[i], broadcastDeviceMask);
 			VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));
 		}
 	}
@@ -524,10 +536,34 @@ public:
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
 
+		VkDeviceGroupSubmitInfoKHR deviceGroupSubmitInfo{};
+		if (settings.mgpu)
+		{
+			deviceGroupSubmitInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR;
+			deviceGroupSubmitInfo.pNext = NULL;
+			deviceGroupSubmitInfo.waitSemaphoreCount = submitInfo.waitSemaphoreCount;
+			deviceGroupSubmitInfo.pWaitSemaphoreDeviceIndices = &renderGpuIndex;
+			deviceGroupSubmitInfo.commandBufferCount = 1;
+			deviceGroupSubmitInfo.pCommandBufferDeviceMasks = &broadcastDeviceMask;
+			deviceGroupSubmitInfo.signalSemaphoreCount = submitInfo.signalSemaphoreCount;
+			deviceGroupSubmitInfo.pSignalSemaphoreDeviceIndices = &renderGpuIndex;
+			submitInfo.pNext = &deviceGroupSubmitInfo;
+		}
+
 		// Submit to queue
 		VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
 
-		VulkanExampleBase::submitFrame();
+		VkDeviceGroupPresentInfoKHR groupPresentInfo{};
+		if (settings.mgpu)
+		{
+			groupPresentInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_PRESENT_INFO_KHR;
+			groupPresentInfo.pNext = NULL;
+			groupPresentInfo.swapchainCount = 1;
+			groupPresentInfo.pDeviceMasks = &presentDeviceMask;
+			groupPresentInfo.mode = VK_DEVICE_GROUP_PRESENT_MODE_REMOTE_BIT_KHR;
+		}
+
+		VulkanExampleBase::submitFrame(settings.mgpu ? &groupPresentInfo : nullptr);
 	}
 
 	void generateQuad()

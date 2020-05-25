@@ -404,6 +404,8 @@ public:
 		}
 
 		VkDeviceGroupPresentCapabilitiesKHR deviceGroupPresentCapabilities{};
+		deviceGroupPresentCapabilities.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_PRESENT_CAPABILITIES_KHR;
+		deviceGroupPresentCapabilities.pNext = NULL;
 		VK_CHECK_RESULT(fpGetDeviceGroupPresentCapabilitiesKHR(device, &deviceGroupPresentCapabilities));
 
 		VkDeviceGroupSwapchainCreateInfoKHR deviceGroupSwapchainCreateInfoKHR{};
@@ -488,7 +490,7 @@ public:
 	*
 	* @return VkResult of the queue presentation
 	*/
-	VkResult queuePresent(VkQueue queue, uint32_t imageIndex, VkSemaphore waitSemaphore = VK_NULL_HANDLE)
+	VkResult queuePresent(VkQueue queue, uint32_t imageIndex, VkSemaphore waitSemaphore = VK_NULL_HANDLE, VkDeviceGroupPresentInfoKHR* groupPresentInfo = nullptr)
 	{
 		VkPresentInfoKHR presentInfo = {};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -502,6 +504,7 @@ public:
 			presentInfo.pWaitSemaphores = &waitSemaphore;
 			presentInfo.waitSemaphoreCount = 1;
 		}
+		presentInfo.pNext = groupPresentInfo;
 		return fpQueuePresentKHR(queue, &presentInfo);
 	}
 

@@ -340,7 +340,7 @@ public:
 	/** Prepare the next frame for workload sumbission by acquiring the next swap chain image */
 	void prepareFrame();
 	/** @brief Presents the current image to the swap chain */
-	void submitFrame();
+	void submitFrame(VkDeviceGroupPresentInfoKHR *groupPresentInfo = nullptr);
 	/** @brief (Virtual) Default image acquire + submission and command buffer submission function */
 	virtual void renderFrame();
 

@@ -586,9 +586,9 @@ void VulkanExampleBase::prepareFrame()
 	}
 }
 
-void VulkanExampleBase::submitFrame()
+void VulkanExampleBase::submitFrame(VkDeviceGroupPresentInfoKHR* groupPresentInfo)
 {
-	VkResult result = swapChain.queuePresent(queue, currentBuffer, semaphores.renderComplete);
+	VkResult result = swapChain.queuePresent(queue, currentBuffer, semaphores.renderComplete, groupPresentInfo);
 	if (!((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 			// Swap chain is no longer compatible with the surface and needs to be recreated
